@@ -1,0 +1,52 @@
+Sn,Name,Packaging Type,Packaging Quantity,Description,Dimensions,Weight,Module Type,Module Quantity,Price Buy,Price Sell,Discount,Price Sell Net,Supplier,Lead Time,Safety Stock,Demand Average,Demand Variability
+1,AA Batteries,Pack,4,Standard AA size,N/A,N/A,N/A,N/A,2.50,3.99,10%,3.59,Supplier A,3 days,50,100,Moderate
+2,AAA Batteries,Pack,8,Standard AAA size,N/A,N/A,N/A,N/A,3.00,4.99,15%,4.24,Supplier A,3 days,50,80,Low
+3,HDMI Cable,Individual,1,6 feet length,6ft (L) x N/A,150g,N/A,N/A,5.00,9.99,None,9.99,Supplier B,2 days,20,50,High
+4,USB Flash Drive,Individual,1,16GB capacity,N/A,20g,N/A,N/A,8.00,14.99,None,14.99,Supplier C,5 days,30,40,Low
+5,Wireless Mouse,Box,1,Optical mouse,N/A,N/A,N/A,N/A,12.00,19.99,None,19.99,Supplier A,3 days,15,25,Moderate
+6,Laptop Backpack,Individual,1,Fits up to 15",18" x 12" x 6",800g,N/A,N/A,25.00,39.99,None,39.99,Supplier D,7 days,10,15,Low
+7,Bluetooth Speaker,Individual,1,Portable speaker,N/A,500g,N/A,N/A,30.00,49.99,20%,39.99,Supplier B,2 days,10,20,Moderate
+8,Wireless Headphones,Pack,2,Over-ear headphones,N/A,N/A,N/A,N/A,50.00,79.99,10%,71.99,Supplier C,5 days,8,12,Moderate
+9,Soccer Ball,Individual,1,Official size and weight,N/A,400g,N/A,N/A,15.00,24.99,None,24.99,Supplier E,4 days,10,15,Moderate
+10,Basketball,Individual,1,Official size and weight,N/A,600g,N/A,N/A,12.00,19.99,None,19.99,Supplier F,3 days,8,10,Low
+11,Tennis Racket,Individual,1,Lightweight racket,N/A,N/A,N/A,N/A,25.00,39.99,None,39.99,Supplier G,2 days,5,8,Moderate
+12,Yoga Mat,Individual,1,Non-slip and cushioned,72" x 24" x 6mm,1.2kg,N/A,N/A,20.00,34.99,10%,31.49,Supplier H,5 days,10,12,Low
+13,Resistance Bands,Pack,5,Set of 5 different resistance,N/A,N/A,N/A,N/A,15.00,24.99,None,24.99,Supplier M,3 days,8,12,Moderate
+14,Aromatherapy Diffuser,Individual,1,Ultrasonic humidifier,N/A,500g,N/A,N/A,20.00,34.99,10%,31.49,Supplier N,5 days,10,15,Low
+15,Essential Oil Set,Box,1,Set of 6 popular scents,N/A,N/A,N/A,N/A,30.00,49.99,15%,42.49,Supplier J,3 days,8,12,Moderate
+16,Yoga Block,Individual,1,High-density foam block,9" x 6" x 4",200g,N/A,N/A,8.00,14.99,None,14.99,Supplier K,2 days,10,15,Low
+17,Meditation Cushion,Individual,1,Comfortable and ergonomic,14" x 14" x 4",800g,N/A,N/A,25.00,39.99,None,39.99,Supplier L,4 days,6,10,Low
+18,Resistance Bands,Pack,5,Set of 5 different resistance,N/A,N/A,N/A,N/A,15.00,24.99,None,24.99,Supplier M,3 days,8,12,Moderate
+19,Aromatherapy Diffuser,Individual,1,Ultrasonic humidifier,N/A,500g,N/A,N/A,20.00,34.99,10%,31.49,Supplier N,5 days,10,15,Low
+20,Facial Cleanser,Bottle,1,Gentle daily face cleanser,N/A,N/A,N/A,N/A,12.00,19.99,None,19.99,Supplier O,3 days,10,15,Moderate
+21,Moisturizing Cream,Jar,1,Hydrating face moisturizer,N/A,N/A,N/A,N/A,18.00,29.99,None,29.99,Supplier P,4 days,8,12,Low
+22,Lipstick,Individual,1,Long-lasting matte lipstick,N/A,N/A,N/A,N/A,10.00,17.99,None,17.99,Supplier Q,2 days,15,20,Moderate
+23,Eyeshadow Palette,Box,1,Palette with multiple shades,N/A,N/A,N/A,N/A,25.00,39.99,None,39.99,Supplier R,3 days,8,10,Low
+24,Mascara,Individual,1,Volumizing and lengthening,N/A,N/A,N/A,N/A,15.00,24.99,None,24.99,Supplier S,2 days,10,15,Moderate
+25,Pillow,Individual,1,Hypoallergenic pillow,20" x 26",500g,N/A,N/A,15.00,24.99,None,24.99,Supplier T,3 days,10,15,Low
+26,Bed Sheets,Set,1,Queen-size bed sheets,60" x 80",1.5kg,N/A,N/A,25.00,39.99,None,39.99,Supplier U,4 days,8,12,Moderate
+27,Coffee Maker,Individual,1,12-cup programmable coffee maker,N/A,2.5kg,N/A,N/A,40.00,69.99,20%,55.99,Supplier V,2 days,10,20,High
+28,Slow Cooker,Individual,1,6-quart programmable slow cooker,N/A,4kg,N/A,N/A,30.00,49.99,15%,42.49,Supplier W,3 days,8,10,Low
+29,Steam Iron,Individual,1,Powerful steam iron with auto shut-off,N/A,1.2kg,N/A,N/A,20.00,34.99,None,34.99,Supplier X,5 days,12,18,Low
+30,Vacuum Cleaner,Box,1,Powerful bagless vacuum cleaner,N/A,5kg,N/A,N/A,80.00,129.99,10%,116.99,Supplier Y,3 days,8,15,Moderate
+31,Bath Towels,Set,4,Soft and absorbent bath towels,30" x 54",600g,N/A,N/A,20.00,34.99,None,34.99,Supplier Z,4 days,10,12,Low
+32,Knife Set,Box,1,Stainless steel knife set with block,N/A,2kg,N/A,N/A,50.00,79.99,15%,67.99,Supplier A,2 days,8,10,Moderate
+33,Cookware Set,Set,1,Non-stick cookware set,Various sizes,N/A,N/A,N/A,100.00,169.99,None,169.99,Supplier B,5 days,6,8,Moderate
+34,Wall Clock,Individual,1,Modern design wall clock,12" diameter,800g,N/A,N/A,15.00,24.99,None,24.99,Supplier C,3 days,10,15,Low
+35,Coffee Mug,Individual,1,Ceramic coffee mug,4" x 3.5",300g,N/A,N/A,5.00,9.99,None,9.99,Supplier D,3 days,20,30,Moderate
+36,Cutting Board,Individual,1,Bamboo cutting board,12" x 8",600g,N/A,N/A,12.00,19.99,None,19.99,Supplier E,4 days,15,20,Low
+37,Mixing Bowl Set,Set,3,Nesting mixing bowls,Various sizes,N/A,N/A,N/A,15.00,24.99,None,24.99,Supplier F,3 days,10,15,Moderate
+38,Blender,Individual,1,High-speed blender with multiple settings,N/A,4kg,N/A,N/A,60.00,99.99,10%,89.99,Supplier G,2 days,8,12,High
+39,Food Storage Containers,Set,10,Plastic food storage containers,Various sizes,N/A,N/A,N/A,20.00,34.99,None,34.99,Supplier H,5 days,10,15,Low
+40,Toolbox,Box,1,Heavy-duty toolbox with multiple compartments,N/A,3kg,N/A,N/A,25.00,39.99,None,39.99,Supplier I,4 days,8,12,Low
+41,Screwdriver Set,Box,1,Set of screwdrivers with various sizes and types,N/A,N/A,N/A,N/A,15.00,24.99,None,24.99,Supplier J,3 days,10,15,Low
+42,Power Drill,Box,1,Cordless power drill with rechargeable battery,N/A,2.5kg,N/A,N/A,50.00,89.99,20%,71.99,Supplier K,2 days,8,10,Moderate
+43,Paint Roller Kit,Set,1,Paint roller kit with tray and roller covers,N/A,N/A,N/A,N/A,10.00,17.99,None,17.99,Supplier L,3 days,15,20,Low
+44,Measuring Tape,Individual,1,Retractable measuring tape,10ft,N/A,N/A,N/A,5.00,9.99,None,9.99,Supplier M,3 days,20,25,Moderate
+45,Hammer,Individual,1,Claw hammer with wooden handle,N/A,500g,N/A,N/A,8.00,14.99,None,14.99,Supplier N,2 days,15,20,Low
+46,Screw Assortment Kit,Box,1,Assorted screws and nails set,N/A,N/A,N/A,N/A,10.00,17.99,None,17.99,Supplier O,3 days,20,25,Moderate
+47,Utility Knife,Individual,1,Retractable utility knife with extra blades,N/A,N/A,N/A,N/A,6.00,11.99,None,11.99,Supplier P,2 days,15,20,Moderate
+48,Sanding Block,Individual,1,Handheld sanding block for wood and metal,N/A,N/A,N/A,N/A,5.00,9.99,None,9.99,Supplier Q,3 days,15,20,Low
+49,Paint Brush Set,Set,5,Assorted paint brushes for different applications,N/A,N/A,N/A,N/A,12.00,19.99,None,19.99,Supplier R,3 days,10,15,Moderate
+50,Level,Individual,1,24-inch bubble level for accurate measurements,N/A,800g,N/A,N/A,15.00,24.99,None,24.99,Supplier S,2 days,10,15,Low
+																
