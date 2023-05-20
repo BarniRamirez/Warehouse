@@ -8,14 +8,12 @@
 # print(relations_times_demand.to_string())
 
 
-# orders_quantities = random.choices(order_quantity_values, weights=order_quantity_weights, k=orders_count)
+# orders_quantities = random.choices(order_quantity_values, weights=order_quantity_weights, k=samples_amount)
 # orders_quantities.sort()
 # print(orders_quantities)
 #
 # orders_quantities_iter = []
-# for i in range(0, orders_count):
+# for i in range(0, samples_amount):
 #     orders_quantities_iter.append(random.choices(order_quantity_values, weights=order_quantity_weights)[0])
 # orders_quantities_iter.sort()
 # print(orders_quantities_iter)
-
-
