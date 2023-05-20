@@ -4,15 +4,16 @@ import random
 
 arrivals_amount = 50
 id_start = 50001
+append_arrivals = True
 
 
 items = pd.read_excel(r"Database\Items.xlsx", sheet_name='Items')
-relations = pd.read_excel(r"Database\Items.xlsx", sheet_name='Relations')
 
-relations_times_demand = relations
-for c in range(1, len(relations)+1):
-    relations_times_demand.iloc[:, c] = relations.iloc[:, c] * items.loc[:, 'Demand Average']
-print(relations_times_demand.to_string())
+if append_arrivals:
+    arrivals_df = pd.read_excel(r"Database\Arrivals.xlsx", sheet_name='Arrivals')
+else:
+    arrivals_df = pd.DataFrame()
+
 
 suppliers = []
 suppliers_weights = []
@@ -56,13 +57,14 @@ for a in range(0, arrivals_amount):
 
     # Create Arrival
     arrivals.append({
-        "ID": id_start + a,
+        "ID": id_start + len(arrivals_df) + a,
         "Arrival Time": pd.Timestamp.now(),
         "Dispatch Time": pd.Timestamp.now(),
+        "Supplier": supplier,
         "Items": arrival_items
     })
 
-arrivals_df = pd.DataFrame(arrivals)
+arrivals_df = pd.concat([arrivals_df, pd.DataFrame(arrivals)], ignore_index=True)
 
 with pd.ExcelWriter(r"Database/Arrivals.xlsx", mode='a', if_sheet_exists='replace') as writer:
     arrivals_df.to_excel(writer, sheet_name='Arrivals', index=False)
