@@ -19,7 +19,7 @@ else:
 arrivals = []
 for ordered_item in ordered_items:
     supplier = items.loc[items['Name'] == ordered_item, 'Supplier'].values[0]
-    quantity = items.loc[items['Name'] == ordered_item, 'Demand Average'].values[0]
+    quantity = items.loc[items['Name'] == ordered_item, 'Min Order Quantity'].values[0]
     found = False
     for s, search in enumerate(arrivals):
         if search['Supplier'] == supplier:
@@ -42,4 +42,3 @@ with pd.ExcelWriter(r"Database/Arrivals.xlsx", mode='a', if_sheet_exists='replac
     arrivals_df.to_excel(writer, sheet_name='Arrivals', index=False)
 
 print(arrivals_df.to_string())
-

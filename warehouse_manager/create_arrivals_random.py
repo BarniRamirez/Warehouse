@@ -52,7 +52,7 @@ for a in range(0, arrivals_amount):
     # Create Tuples
     arrival_items = []
     for item in arrival_items_name:
-        quantity = items.loc[items['Name'] == item, 'Demand Average'].values[0]
+        quantity = items.loc[items['Name'] == item, 'Min Order Quantity'].values[0]
         arrival_items.append((item, quantity))
 
     # Create Arrival
