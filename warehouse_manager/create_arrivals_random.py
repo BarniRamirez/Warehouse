@@ -1,16 +1,17 @@
 import pandas as pd
 import random
+import json
 
 
 arrivals_amount = 50
 id_start = 50001
-append_arrivals = True
+append_arrivals = False
 
 
 items = pd.read_excel(r"Database\Items.xlsx", sheet_name='Items')
 
 if append_arrivals:
-    arrivals_df = pd.read_excel(r"Database\Arrivals.xlsx", sheet_name='Arrivals')
+    arrivals_df = pd.read_excel(r"Database\Orders.xlsx", sheet_name='Arrivals')
 else:
     arrivals_df = pd.DataFrame()
 
@@ -49,24 +50,31 @@ for a in range(0, arrivals_amount):
     print(items_weights)
     print(arrival_items_name)
 
-    # Create Tuples
+    # Create Dictionaries
     arrival_items = []
     for item in arrival_items_name:
-        quantity = items.loc[items['Name'] == item, 'Min Order Quantity'].values[0]
-        arrival_items.append((item, quantity))
+        data = {
+            "Name": item,
+            "Quantity": items.loc[items['Name'] == item, 'Min Order Quantity'].values[0]
+        }
+        arrival_items.append(data)
 
     # Create Arrival
+    current_time = pd.Timestamp.now()
+    arrival_delay = pd.DateOffset(seconds=random.randint(0, 100))
+    dispatch_delay = pd.DateOffset(seconds=random.randint(0, 100))
     arrivals.append({
         "ID": id_start + len(arrivals_df) + a,
-        "Arrival Time": pd.Timestamp.now(),
-        "Dispatch Time": pd.Timestamp.now(),
+        "State": 'Scheduled',
+        "Arrival Time": current_time + arrival_delay,
+        "Dispatch Time": current_time + arrival_delay + dispatch_delay,
         "Supplier": supplier,
         "Items": arrival_items
     })
 
-arrivals_df = pd.concat([arrivals_df, pd.DataFrame(arrivals)], ignore_index=True)
+arrivals_df = pd.concat([arrivals_df, pd.DataFrame(arrivals)]).sort_values('Arrival Time', ignore_index=True)
 
-with pd.ExcelWriter(r"Database/Arrivals.xlsx", mode='a', if_sheet_exists='replace') as writer:
+with pd.ExcelWriter(r"Database/Orders.xlsx", mode='a', if_sheet_exists='replace') as writer:
     arrivals_df.to_excel(writer, sheet_name='Arrivals', index=False)
 
 print(arrivals_df.to_string())
