@@ -1,0 +1,63 @@
+MDScreen:
+
+    MDBottomNavigation:
+        #panel_color: "#eeeaea"
+        selected_color_background: "orange"
+        text_color_active: "lightgrey"
+
+        theme_style_button: theme_style_button
+
+        MDBottomNavigationItem:
+            name: 'screen 1'
+            text: 'Menu'
+            icon: 'menu'
+            badge_icon: "numeric-10"
+
+            MDDropDownItem:
+                id: drop_item
+                pos_hint: {'center_x': .5, 'center_y': .8}
+                text: 'Item'
+                on_release: print("Press item")
+
+            MDLabel:
+                text: 'Menu'
+                halign: 'center'
+
+        MDBottomNavigationItem:
+            name: 'screen 2'
+            text: 'Destination'
+            icon: 'map-search'
+            badge_icon: "numeric-5"
+
+            MDLabel:
+                text: 'Destination'
+                halign: 'center'
+
+        MDBottomNavigationItem:
+            name: 'screen 3'
+            text: 'Trip'
+            icon: 'map-marker-path'
+
+            MDLabel:
+                text: 'Trip'
+                halign: 'center'
+
+        MDBottomNavigationItem:
+            name: 'screen 4'
+            text: 'Settings'
+            icon: 'cogs'
+
+            MDLabel:
+                text: 'Settings'
+                halign: 'center'
+                pos_hint: {"y":0.4}
+
+            MDRoundFlatIconButton:
+                id: theme_style_button
+                #halign: 'center'
+                pos_hint: {"x":0.5,"y":0.5}
+                text: "Change Theme"
+                #icon: "android"
+                text_color: "black"
+                on_press: app.btn()
+
