@@ -3,7 +3,7 @@ import random
 import json
 
 
-arrivals_amount = 50
+arrivals_amount = 20
 id_start = 50001
 append_arrivals = False
 
@@ -23,13 +23,13 @@ for i in range(0, len(items)):
     found = False
     for s, search in enumerate(suppliers):
         if search == items.loc[i, 'Supplier']:
-            suppliers_weights[s] += items.loc[i, 'Demand Average']
+            suppliers_weights[s] += items.loc[i, 'Demand Average']/items.loc[i, 'Stored Quantity']
             suppliers_items[s].append(items.loc[i, 'Name'])
             found = True
             break
     if not found:
         suppliers.append(items.loc[i, 'Supplier'])
-        suppliers_weights.append(items.loc[i, 'Demand Average'])
+        suppliers_weights.append(items.loc[i, 'Demand Average']/items.loc[i, 'Stored Quantity'])
         suppliers_items.append([items.loc[i, 'Name']])
 
 print(suppliers)
@@ -43,8 +43,9 @@ for a in range(0, arrivals_amount):
     supplier = random.choices(suppliers, weights=suppliers_weights)[0]
     supplied_items = suppliers_items[suppliers.index(supplier)]
     items_weights = []
-    for item in supplied_items:
-        items_weights.append(items.loc[items['Name'] == item, 'Demand Average'].values[0])
+    for supplied_item in supplied_items:
+        item = items.loc[items['Name'] == supplied_item].iloc[0]
+        items_weights.append(item['Demand Average']/item['Stored Quantity'])
     arrival_items_name = list(set(random.choices(supplied_items, weights=items_weights, k=len(supplied_items))))
     print(supplier)
     print(items_weights)
@@ -55,14 +56,14 @@ for a in range(0, arrivals_amount):
     for item in arrival_items_name:
         data = {
             "Name": item,
-            "Quantity": items.loc[items['Name'] == item, 'Min Order Quantity'].values[0]
+            "Quantity": items.loc[items['Name'] == item, 'Lot Quantity'].values[0]
         }
         arrival_items.append(data)
 
     # Create Arrival
     current_time = pd.Timestamp.now()
-    arrival_delay = pd.DateOffset(seconds=random.randint(0, 100))
-    dispatch_delay = pd.DateOffset(seconds=random.randint(0, 100))
+    arrival_delay = pd.DateOffset(seconds=random.randint(0, 1))
+    dispatch_delay = pd.DateOffset(seconds=random.randint(0, 1))
     arrivals.append({
         "ID": id_start + len(arrivals_df) + a,
         "State": 'Scheduled',
