@@ -11,17 +11,22 @@ class PLCHandler:
 
         self.xn = xn
         self.zn = zn
+
+        self.command = []
         self.state = 0
-        self.working_command = 0
         self.error_code = 0
 
         self.commands = []
         self.history = []
 
-        self.STATE_READY = 0
-        self.STATE_OCCUPIED = 1
-        self.STATE_COMMAND_ERROR = 10
-        self.STATE_SYSTEM_ERROR = 11
+        self.READY = 0
+        self.OCCUPIED = 1
+        self.NEW_COMMAND = 2
+        self.COMMAND_DONE = 3
+        self.UNKNOWN = 4
+        self.COMMAND_ERROR = 10
+        self.SYSTEM_ERROR = 11
+        self.MAINTENANCE = 15
 
     def connect(self):
         if not self.client.host == self.host and self.client.port == self.port:
@@ -34,7 +39,7 @@ class PLCHandler:
         if not self.update_state():
             return False
 
-        if self.state == self.STATE_READY and len(self.commands) != 0:
+        if self.state == self.READY and len(self.commands) != 0:
             command = self.commands[0]
             print(f"Sending command: {command}")
             if not self.write(0, command):
@@ -43,15 +48,22 @@ class PLCHandler:
             self.commands.pop(0)
             return True
 
-        if self.state == self.STATE_OCCUPIED:
+        if self.state == self.OCCUPIED:
             print("Plc is occupied in other commands. Please wait")
             return False
 
-        if self.state == self.STATE_COMMAND_ERROR:
-            print(f"Command error. Please check the command id: {self.working_command}")
+        if self.state == self.COMMAND_DONE:
+            print(f"Command {self.command} is done. GOOOOOOOOLDFDDDDMHVJFYTD")
+            self.set_state(self.UNKNOWN)
             return False
 
-        if self.state == self.STATE_SYSTEM_ERROR:
+        if self.state == self.COMMAND_ERROR:
+            print(f"Command error. Please check the command: {self.command}")
+            print(f"Container: {str(self.command[0])[0:-3]}")
+            self.set_state(self.UNKNOWN)
+            return False
+
+        if self.state == self.SYSTEM_ERROR:
             print(f"System error. Please check the error code: {self.error_code}")
             return False
 
@@ -61,15 +73,18 @@ class PLCHandler:
         self.connect()
 
         # Read the state from the appropriate address
-        registers = self.client.read_holding_registers(6, 3)
+        registers = self.client.read_holding_registers(0, 7)
         if not registers:
             return False
         print(f"Read Register: {registers}")
 
-        self.state = registers[0]
-        self.working_command = registers[1]
-        self.error_code = registers[2]
+        self.command = registers[:6]
+        self.state = registers[6]
+        self.error_code = registers[7]
         return True
+
+    def set_state(self, state: int):
+        self.write(6, [state])
 
     def write(self, address, registers):
         self.connect()
@@ -134,12 +149,31 @@ class PLCHandler:
 
 
 if __name__ == "__main__":
-    plc = PLCHandler("localhost")
+    plc = PLCHandler("192.168.0.10", 502, 3, 3)
     if not plc.check():
         print("Failed to check")
         exit(1)
-    plc.add_load((0, 0), 1)
+
+    plc.add_load((1, 1), 1)
     plc.add_unload((0, 0), 1)
+
+    plc.add_load((1, 2), 1)
+    plc.add_load((1, 3), 1)
+    plc.add_load((2, 1), 1)
+    plc.add_load((2, 3), 1)
+    plc.add_load((2, 2), 1)
+
+    plc.add_unload((1, 2), 1)
+    plc.add_unload((1, 3), 1)
+    plc.add_unload((2, 1), 1)
+    plc.add_unload((2, 3), 1)
+
+    plc.add_load((1, 2), 1)
+    plc.add_load((1, 3), 1)
+    plc.add_load((2, 1), 1)
+    plc.add_load((2, 3), 1)
+    plc.add_load((2, 2), 1)
+
     plc.add_move([[0, 0], [0, 0]], 1)
 
     while True:
