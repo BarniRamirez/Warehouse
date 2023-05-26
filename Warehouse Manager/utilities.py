@@ -165,11 +165,14 @@ for c, cont in containers.iterrows():
     containers.loc[c, 'Filling'] = 0
     containers.loc[c, 'Items'].clear()
 
-dispatching_lots = []
 
 with pd.ExcelWriter(r"Database/Components.xlsx", mode='a', if_sheet_exists='replace') as writer:
     slots.to_excel(writer, sheet_name='Slots', index=False)
     containers.to_excel(writer, sheet_name='Containers', index=False)
+
 with open("Database/dispatching_temp.json", "w") as temp:
-    json.dump(dispatching_lots, temp)
+    json.dump([], temp)
+
+with open("Database/commands_temp.json", "w") as temp:
+    json.dump([], temp)
 
