@@ -1,5 +1,6 @@
 import pandas as pd
 import json
+import time
 import math
 import ast
 
@@ -8,7 +9,7 @@ from PLCHandler import PLCHandler
 
 # Global Variables
 
-plc = PLCHandler('localhost', 512, xn=3, zn=3)
+plc = PLCHandler('192.168.0.10', 502, xn=3, zn=3)
 
 
 # Functions
