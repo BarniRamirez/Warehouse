@@ -46,26 +46,21 @@ class PLCHandler:
                 return False
             self.history.append(command)
             self.commands.pop(0)
-            return True
 
         if self.state == self.OCCUPIED:
             print("Plc is occupied in other commands. Please wait")
-            return False
 
         if self.state == self.COMMAND_DONE:
             print(f"Command {self.command} is done. GOOOOOOOOLDFDDDDMHVJFYTD")
             self.set_state(self.UNKNOWN)
-            return False
 
         if self.state == self.COMMAND_ERROR:
             print(f"Command error. Please check the command: {self.command}")
             print(f"Container: {str(self.command[0])[0:-3]}")
             self.set_state(self.UNKNOWN)
-            return False
 
         if self.state == self.SYSTEM_ERROR:
             print(f"System error. Please check the error code: {self.error_code}")
-            return False
 
         return True
 
@@ -73,7 +68,7 @@ class PLCHandler:
         self.connect()
 
         # Read the state from the appropriate address
-        registers = self.client.read_holding_registers(0, 7)
+        registers = self.client.read_holding_registers(0, 8)
         if not registers:
             return False
         print(f"Read Register: {registers}")
@@ -150,37 +145,33 @@ class PLCHandler:
 
 if __name__ == "__main__":
     plc = PLCHandler("192.168.0.10", 502, 3, 3)
-    if not plc.check():
-        print("Failed to check")
-        exit(1)
 
     plc.add_load((1, 1), 1)
-    plc.add_unload((0, 0), 1)
+    plc.add_unload((0, 0), 2)
 
-    plc.add_load((1, 2), 1)
-    plc.add_load((1, 3), 1)
-    plc.add_load((2, 1), 1)
-    plc.add_load((2, 3), 1)
-    plc.add_load((2, 2), 1)
+    plc.add_load((1, 2), 3)
+    plc.add_load((1, 3), 4)
+    plc.add_load((2, 1), 5)
+    plc.add_load((2, 3), 6)
+    plc.add_load((2, 2), 7)
 
-    plc.add_unload((1, 2), 1)
-    plc.add_unload((1, 3), 1)
-    plc.add_unload((2, 1), 1)
-    plc.add_unload((2, 3), 1)
+    plc.add_unload((1, 2), 8)
+    plc.add_unload((1, 3), 9)
+    plc.add_unload((2, 1), 10)
+    plc.add_unload((2, 3), 11)
 
-    plc.add_load((1, 2), 1)
-    plc.add_load((1, 3), 1)
-    plc.add_load((2, 1), 1)
-    plc.add_load((2, 3), 1)
-    plc.add_load((2, 2), 1)
+    plc.add_load((1, 2), 12)
+    plc.add_load((1, 3), 13)
+    plc.add_load((2, 1), 14)
+    plc.add_load((2, 3), 15)
+    plc.add_load((2, 2), 16)
 
-    plc.add_move([[0, 0], [0, 0]], 1)
+    plc.add_move([[0, 0], [0, 0]], 17)
 
     while True:
         if not plc.check():
             print("Failed to check")
-        print(f"State: {plc.state}")
-        time.sleep(1)
+        time.sleep(2)
 
 
 
