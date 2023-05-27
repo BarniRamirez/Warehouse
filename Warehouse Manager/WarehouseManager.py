@@ -4,18 +4,15 @@ import time
 import math
 import ast
 
-from PLCHandler import PLCHandler
+from PLC import CommandHandler
 
 
 # Global Variables
 
-plc = PLCHandler('192.168.0.10', 502, xn=3, zn=3)
-
-
-# Functions
-
-
-# Classes
+chs = [
+    CommandHandler('192.168.0.10', xs=[1, 3], zs=[1, 3]),
+    CommandHandler('localhost', xs=[4, 200], zs=[4, 200])
+]
 
 slots = pd.read_excel(r"Database\Components.xlsx", sheet_name='Slots')
 slots['Items'] = slots['Items'].apply(ast.literal_eval)
@@ -49,9 +46,6 @@ print(arrivals.to_string())
 print(departures.to_string())
 print(enumerations.to_string())
 print(dispatching_lots)
-# print(f"\n\n {type(arrivals['Items'].iloc[0])}")
-#
-# exit(666)
 
 
 def save_to_database():
@@ -386,13 +380,17 @@ def generate_commands():
     target = (slots.loc[slot_index, 'TargetX'], slots.loc[slot_index, 'TargetZ'])
     print(target)
 
-    if plc.xn >= target[0] and plc.zn >= target[1]:
+    if ch.:
         print("Load command added")
-        plc.add_load(target, containers.loc[container_index]['ID'])
+        ch.add_load(target, containers.loc[container_index]['ID'])
     else:
-        print("No PLC that reach the target")
+        print("No PLC that reach the target_to")
 
     containers.loc[container_index, 'Priority'] = 0
+
+
+def update_commands():
+    for ch in chs:
 
 
 def main():
@@ -403,9 +401,9 @@ def main():
             fulfill_departures()
             update_states()
             # generate_commands()
-            # if not plc.check():
+            # if not ch.check():
             #     print("Unable to check PLC")
-            # print(plc.commands)
+            # print(ch.commands)
             # save_to_database()
 
             print(dispatching_lots)

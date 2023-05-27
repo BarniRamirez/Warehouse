@@ -1,0 +1,92 @@
+<MenuItem>:
+    size_hint_y: None
+    height: "42dp"
+    on_release: app.menu_item_selected(self.text)
+
+
+MDBoxLayout:
+    orientation: "vertical"
+
+    MDTopAppBar:
+        id: toolbar
+        title: "Test MDBottomNavigation"
+        md_bg_color: app.theme_cls.primary_color
+        left_action_items: [["menu", app.open_menu]]
+
+    MDBottomNavigation:
+        id: panel
+
+        MDBottomNavigationItem:
+            name: "files1"
+            text: "Python"
+            icon: "language-python"
+
+            ScrollView:
+
+                BoxLayout:
+                    pos_hint: {"center_x": .5,"center_y": 0.1}
+                    orientation: "vertical"
+                    size_hint_y: None
+                    height: self.minimum_height
+                    spacing: dp(10)
+                    pos_hint: {"center_x": .5, "center_y": .5}
+
+                    Widget:
+                        size_hint_y: None
+                        height: dp(50)
+
+                    MDLabel:
+                        font_style: "Body1"
+                        theme_text_color: "Primary"
+                        text: "Toggle to set custom panel color"
+                        halign: "center"
+
+                    MDSwitch:
+                        size_hint: None, None
+                        size: dp(36), dp(48)
+                        pos_hint: {"center_x": .5}
+                        on_active:
+                            panel.panel_color = [0.298, 0.282, 0.329, 1] if self.active else app.theme_cls.bg_dark
+
+                    MDTextField:
+                        id: text_field
+                        size_hint_x: None
+                        width: "200dp"
+                        hint_text: "Enter text"
+                        on_text: app.text_entered(self.text)
+
+                    MDFlatButton:
+                        id: custom_button
+                        text: "Custom Button"
+                        pos_hint: {"center_x": .5}
+                        on_release: app.custom_button_pressed()
+
+                    MDFlatButton:
+                        id: open_table_button_1
+                        text: "Open Table"
+                        pos_hint: {"center_x": .5}
+                        on_release: app.open_table_button_pressed()
+
+
+
+        MDBottomNavigationItem:
+            name: "files2"
+            text: "C++"
+            icon: "language-cpp"
+
+            MDLabel:
+                font_style: "Body1"
+                theme_text_color: "Primary"
+                text: "I program in C++"
+                halign: "center"
+
+        MDBottomNavigationItem:
+            name: "files3"
+            text: "JS"
+            icon: "language-javascript"
+
+            MDLabel:
+                font_style: "Body1"
+                theme_text_color: "Primary"
+                text: "Oh god, JS again"
+                halign: "center"
