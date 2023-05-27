@@ -329,19 +329,58 @@ Finally, it prints the filled container and assigned slot.
         items.loc[item_index, 'Stored Quantity'] += item['Quantity']
 
     print(f"\nFilled container: \n{ containers.loc[container_index] }\n \nSlot: { slots.loc[slot_index, 'ID'] }\n")
+    return
+
+
+def fulfill_departures():
+    departures.sort_values('Deadline', ignore_index=True)
+
+    unloading_items = []
+    for d, departure in departures.tail(10).iterrows():
+        for lot in departure['Items']:
+            if lot['Name'] in unloading_items:
+                index = unloading_items.index(lot['Name'])
+                unloading_items[index]['Quantity'] += lot['Quantity']
+            else:
+                unloading_items.append(lot)
+    unloading_item_names = [lot['Name'] for lot in unloading_items]
+
+    unloading_capacities = []  # {container_index: int, capacity: int, will_be_empty: bool}
+    for c, container in containers.loc[containers['State'] == 'Stored'].iterrows():
+        container_quantity = 0
+        data = {
+            'Container Index': c,
+            'Capacity': 0,
+            'Will Be Empty': False
+        }
+        for lot in container['Items']:
+            container_quantity += lot['Quantity']
+            if lot['Name'] in unloading_item_names:
+                index = unloading_items.index(lot['Name'])
+                data['Capacity'] += min(lot['Quantity'], unloading_items[index]['Quantity'])
+
+        if container_quantity == data['Capacity']:
+            data['Will Be Empty'] = True
+
+        unloading_capacities.append(data)
+
+    unloading_capacities_df = pd.DataFrame(unloading_capacities)
+    print(unloading_capacities_df)
+
+    return
 
 
 def generate_commands():
     mask = (containers['State'] == 'Loading') & (containers['Priority'] != 0)
     if not mask.any():
-        print('No containers to load')
+        print("No containers to load")
         return
     container_index = containers.loc[mask, 'Priority'].idxmin()
     print(container_index)
 
     mask = (slots['ID'] == containers.loc[container_index, 'Slot']) & (slots['State'] == 'Loading')
     if not mask.any():
-        print('No slot to load')
+        print("No slot to load")
         return
     slot_index = slots.loc[mask].index[0]
     target = (slots.loc[slot_index, 'TargetX'], slots.loc[slot_index, 'TargetZ'])
@@ -361,11 +400,12 @@ def main():
         while True:
             update_dispatching()
             dispatch_arrivals()
+            fulfill_departures()
             update_states()
-            generate_commands()
-            if not plc.check():
-                print("Unable to check PLC")
-            print(plc.commands)
+            # generate_commands()
+            # if not plc.check():
+            #     print("Unable to check PLC")
+            # print(plc.commands)
             # save_to_database()
 
             print(dispatching_lots)

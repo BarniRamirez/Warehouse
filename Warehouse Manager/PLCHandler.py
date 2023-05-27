@@ -105,7 +105,7 @@ class PLCHandler:
             0,  # Target Y
             int(target[0]),  # Target X2
             int(target[1]),  # Target Y2
-            1,  # New Command
+            self.NEW_COMMAND,  # New Command
         ]
 
         self.commands.append(command)
@@ -115,12 +115,12 @@ class PLCHandler:
     def add_unload(self, target: tuple, container_id: int):
         command = [
             container_id + 20000,  # Command ID
-            1,  # Unload command
+            2,  # Unload command
             int(target[0]),  # Target X
             int(target[1]),  # Target Y
             0,  # Target X2
             0,  # Target Y2
-            1,  # New Command
+            self.NEW_COMMAND,  # New Command
         ]
 
         self.commands.append(command)
@@ -135,7 +135,7 @@ class PLCHandler:
             int(target[0][1]),  # Target Y
             int(target[1][0]),  # Target X2
             int(target[1][1]),  # Target Y2
-            1,  # New Command
+            self.NEW_COMMAND,  # New Command
         ]
 
         self.commands.append(command)
