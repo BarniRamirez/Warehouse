@@ -13,12 +13,12 @@ containers = pd.read_excel(r"Database\Components.xlsx", sheet_name='Containers')
 containers['Items'] = containers['Items'].apply(ast.literal_eval)
 
 chs = [
-    # CommandHandler('192.168.0.10', "Area1",  # Handles commands for Area1
-    #                targets=slots.loc[slots['Area'] == 1].apply(lambda row: (row['TargetX'], row['TargetZ']),
-    #                                                            axis=1).tolist()),
-    CommandHandler('localhost', "Global",  # Handles commands for all areas
-                   targets=slots.loc[slots['Area'] > 0].apply(lambda row: (row['TargetX'], row['TargetZ']),
-                                                              axis=1).tolist())
+    CommandHandler('192.168.0.10', "Area1",  # Handles commands for Area1
+                   targets=slots.loc[slots['Area'] == 1].apply(lambda row: (row['TargetX'], row['TargetZ']),
+                                                               axis=1).tolist()),
+    # CommandHandler('localhost', "Global",  # Handles commands for all areas
+    #                targets=slots.loc[slots['Area'] > 0].apply(lambda row: (row['TargetX'], row['TargetZ']),
+    #                                                           axis=1).tolist())
 ]
 commands_to_send = []
 commands_received = []

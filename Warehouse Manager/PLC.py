@@ -73,18 +73,18 @@ class CommunicationModule:
         self.STATE_ADDRESS = 6
         self.ERROR_CODE_ADDRESS = 7
 
-        self.READY = 0
-        self.OCCUPIED = 1
-        self.NEW_COMMAND = 2
-        self.COMMAND_DONE = 3
-        self.UNKNOWN = 4
+        self.UNKNOWN = 0
+        self.READY = 1
+        self.OCCUPIED = 2
+        self.NEW_COMMAND = 5
+        self.COMMAND_DONE = 6
         self.COMMAND_ERROR = 10
         self.SYSTEM_ERROR = 11
         self.MAINTENANCE = 15
 
     def connect(self):
         if not self.client.host == self.host and self.client.port == self.port:
-            self.client = ModbusClient(host=self.host, port=self.port)
+            self.client = ModbusClient(host=self.host, port=self.port, auto_open=True, debug=False)
             if not self.client.open():
                 raise ConnectionError(f"Failed to connect to {self.host}:{self.port}")
 
@@ -116,7 +116,7 @@ class CommunicationModule:
             if registers:
                 return registers
 
-            print("Error in reading commands. Retrying...")
+            # print("Error in reading commands. Retrying...")
             time.sleep(0.05)
 
     def write_registers(self, address, registers):
@@ -234,7 +234,7 @@ class CommandHandler(CommunicationModule):
             return self.verify_target(command.target_to)
         if command.action == "Unload":
             return self.verify_target(command.target_from)
-        if command.action == "Unload":
+        if command.action == "Move":
             return self.verify_target(command.target_from) and self.verify_target(command.target_to)
         print(f"Verify command: Invalid command: {command.to_string()}")
         return False
@@ -273,6 +273,7 @@ class CommandHandler(CommunicationModule):
         if not self.update():
             print("\nFailed to update data")
             return False
+        print(f"State: {self.state}")
 
         if self.state == self.READY and len(self.commands) != 0:
             command = self.commands[0]
