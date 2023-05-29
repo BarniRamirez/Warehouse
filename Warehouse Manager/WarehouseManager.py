@@ -1,23 +1,27 @@
 import pandas as pd
 import json
-import time
+# import time
 import math
 import ast
 
-from PLC import CommandHandler
-
+from PLC import Command, CommandHandler
 
 # Global Variables
-
-chs = [
-    CommandHandler('192.168.0.10', xs=[1, 3], zs=[1, 3]),
-    CommandHandler('localhost', xs=[4, 200], zs=[4, 200])
-]
-
 slots = pd.read_excel(r"Database\Components.xlsx", sheet_name='Slots')
 slots['Items'] = slots['Items'].apply(ast.literal_eval)
 containers = pd.read_excel(r"Database\Components.xlsx", sheet_name='Containers')
 containers['Items'] = containers['Items'].apply(ast.literal_eval)
+
+chs = [
+    # CommandHandler('192.168.0.10', "Area1",  # Handles commands for Area1
+    #                targets=slots.loc[slots['Area'] == 1].apply(lambda row: (row['TargetX'], row['TargetZ']),
+    #                                                            axis=1).tolist()),
+    CommandHandler('localhost', "Global",  # Handles commands for all areas
+                   targets=slots.loc[slots['Area'] > 0].apply(lambda row: (row['TargetX'], row['TargetZ']),
+                                                              axis=1).tolist())
+]
+commands_to_send = []
+commands_received = []
 
 items = pd.read_excel(r"Database\Items.xlsx", sheet_name='Items')
 relations = pd.read_excel(r"Database\Items.xlsx", sheet_name='Relations')
@@ -36,7 +40,6 @@ enumerations = pd.read_excel(r"Database\Components.xlsx", sheet_name='Enumeratio
 
 with open(r"Database/dispatching_temp.json", "r") as f:
     dispatching_lots = json.load(f)
-
 
 print(items.to_string())
 print(relations.to_string())
@@ -94,6 +97,7 @@ def update_dispatching():
     for value in arrivals.loc[mask, 'Items'].values:
         dispatching_lots.extend(list(value))
     arrivals.loc[mask, 'State'] = 'Dispatched'
+    print(dispatching_lots)
 
 
 def verify_dimensions(container: pd.Series, item_names: list, quantity: int):
@@ -118,23 +122,22 @@ def verify_dimensions(container: pd.Series, item_names: list, quantity: int):
     return True
 
 
-def select_container(item_names: list, quantity: int):
-    # Select an adeguate container. It must have all dimensions grater than the selected items.
+def select_container(item_names: list, total_quantity: int):
+    # Select the first container that can fit the items.
+    item_quantity = round(total_quantity / len(item_names))
     mask = pd.Series(False, containers.index)
     while True:
-        if quantity < 4:
+        if item_quantity < 1:
             break
         mask = (
-                (containers.apply(verify_dimensions, axis=1, args=(item_names, round(quantity/len(item_names), 0)))) &
+                (containers.apply(verify_dimensions, axis=1, args=(item_names, item_quantity))) &
                 (containers['State'] == 'Free')
         )
         if any(mask):
             break
         else:
-            quantity = quantity/2
+            item_quantity = round(item_quantity / 2)
 
-    if not any(mask):
-        mask = (containers.apply(verify_dimensions, axis=1, args=(item_names, 1))) & (containers['State'] == 'Free')
     if not any(mask):
         print(f"No adequate container found. Selected items: {item_names}")
         return None
@@ -178,13 +181,6 @@ def add_one_item(item: pd.Series, ci: int):
 
 
 def fill_with_many_items(items_names: list, ci: int, filling_percentage: int):
-    """
-    :param items_names: list of items names
-    :param ci: container
-    :param filling_percentage: filling percentage
-    :return: filled container
-    """
-
     while True:
         if len(items_names) == 0:
             print("\nContainer Partially Filled\n")
@@ -261,11 +257,10 @@ def book_free_slot(container: pd.Series):
 
     else:
         print(f"\n\nNot equal container found.\n\n")
+        # Select all free slots compatible with the container
         mask = (slots['Type'] == container['Type']) & (slots['State'] == 'Free')
 
-    if not any(mask):
-        mask = (slots['Type'] == container['Type']) & (slots['State'] == 'Free')
-
+    # Select the slot with the lowest path weight
     if any(mask):
         print("Book the suitable slot with the lowest path weight")
         slot_index = slots.loc[mask, 'Path Weight'].idxmin()
@@ -297,6 +292,7 @@ Finally, it prints the filled container and assigned slot.
     if not n:
         return
 
+    # Select a suitable container
     container_index = select_container(item_names, 60)
     if container_index is None:
         return
@@ -322,24 +318,25 @@ Finally, it prints the filled container and assigned slot.
         item_index = items.loc[items['Name'] == item['Name']].index[0]
         items.loc[item_index, 'Stored Quantity'] += item['Quantity']
 
-    print(f"\nFilled container: \n{ containers.loc[container_index] }\n \nSlot: { slots.loc[slot_index, 'ID'] }\n")
+    print(f"\nFilled container: \n{containers.loc[container_index]}\n \nSlot: {slots.loc[slot_index, 'ID']}\n")
     return
 
 
 def fulfill_departures():
+    # Select the 10 most urgent departures and their items
     departures.sort_values('Deadline', ignore_index=True)
 
-    unloading_items = []
+    items_to_unload = []
     for d, departure in departures.tail(10).iterrows():
         for lot in departure['Items']:
-            if lot['Name'] in unloading_items:
-                index = unloading_items.index(lot['Name'])
-                unloading_items[index]['Quantity'] += lot['Quantity']
+            if lot['Name'] in items_to_unload:
+                index = items_to_unload.index(lot['Name'])
+                items_to_unload[index]['Quantity'] += lot['Quantity']
             else:
-                unloading_items.append(lot)
-    unloading_item_names = [lot['Name'] for lot in unloading_items]
+                items_to_unload.append(lot)
+    items_to_unload_names = [lot['Name'] for lot in items_to_unload]
 
-    unloading_capacities = []  # {container_index: int, capacity: int, will_be_empty: bool}
+    unload_capacities = []  # {container_index: int, capacity: int, will_be_empty: bool}
     for c, container in containers.loc[containers['State'] == 'Stored'].iterrows():
         container_quantity = 0
         data = {
@@ -349,22 +346,21 @@ def fulfill_departures():
         }
         for lot in container['Items']:
             container_quantity += lot['Quantity']
-            if lot['Name'] in unloading_item_names:
-                index = unloading_items.index(lot['Name'])
-                data['Capacity'] += min(lot['Quantity'], unloading_items[index]['Quantity'])
+            if lot['Name'] in items_to_unload_names:
+                index = items_to_unload.index(lot['Name'])
+                data['Capacity'] += min(lot['Quantity'], items_to_unload[index]['Quantity'])
 
         if container_quantity == data['Capacity']:
             data['Will Be Empty'] = True
 
-        unloading_capacities.append(data)
+        unload_capacities.append(data)
 
-    unloading_capacities_df = pd.DataFrame(unloading_capacities)
+    unloading_capacities_df = pd.DataFrame(unload_capacities).sort('Capacity', ascending=False)
     print(unloading_capacities_df)
-
     return
 
 
-def generate_commands():
+def generate_load():
     mask = (containers['State'] == 'Loading') & (containers['Priority'] != 0)
     if not mask.any():
         print("No containers to load")
@@ -376,37 +372,73 @@ def generate_commands():
     if not mask.any():
         print("No slot to load")
         return
+
     slot_index = slots.loc[mask].index[0]
     target = (slots.loc[slot_index, 'TargetX'], slots.loc[slot_index, 'TargetZ'])
     print(target)
 
-    if ch.:
-        print("Load command added")
-        ch.add_load(target, containers.loc[container_index]['ID'])
-    else:
-        print("No PLC that reach the target_to")
+    commands_to_send.append(Command('Load', (0, 0), target, slots.loc[slot_index, 'ID']))
+    # sent = False
+    # for ch in chs:
+    #     sent = False
+    #     if ch.add_load(target, slots.loc[slot_index, 'ID']):
+    #         print(f"Load command added to queue: {ch.commands[-1].to_string()}")
+    #         print(f"CommandHandler: {ch.host}")
+    #         sent = True
+    #         break
+    #
+    # if not sent:
+    #     print("Load command not sent")
+    #     commands_to_send.append(Command('Load', (0, 0), target, slots.loc[slot_index, 'ID']))
 
     containers.loc[container_index, 'Priority'] = 0
 
 
-def update_commands():
-    for ch in chs:
+def generate_commands():
+    # if not commands_to_send:
+    generate_load()
+    print(f"{commands_to_send = }")
+
+    # Send commands to all handlers
+    index = 0
+    while index < len(commands_to_send):
+        command = commands_to_send[index]
+        sent = False
+        for i, ch in enumerate(chs):
+            print(f"Verify command: {command.to_string()} on PLC #{i}")
+            if ch.verify_command(command):
+                print(f"Command can be sent to handler. Adding to queue")
+                ch.add(command)
+                commands_to_send.pop(index)
+                sent = True
+                break
+
+            print(f"Handler: {ch.host}")
+            print(f"Handler Status: {ch.state}")
+            print(f"Handler Queue Length: {len(ch.commands)}")
+
+        # Increment index only if the command was not sent
+        if not sent:
+            index += 1
 
 
 def main():
+    # # Start polling PLCs in separate threads
+    # for ch in chs:
+    #     ch.start()
+
+    # Start main loop
     try:
         while True:
             update_dispatching()
             dispatch_arrivals()
-            fulfill_departures()
+            # fulfill_departures()
             update_states()
-            # generate_commands()
-            # if not ch.check():
-            #     print("Unable to check PLC")
-            # print(ch.commands)
-            # save_to_database()
+            generate_commands()
+            for ch in chs:
+                ch.check()
 
-            print(dispatching_lots)
+            # save_to_database()
             # time.sleep(1)
 
     except KeyboardInterrupt:

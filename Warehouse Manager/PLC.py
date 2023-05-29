@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 class Command:
-    def __init__(self, action: str | int, target_from: tuple, target_to: tuple, container_id: int):
+    def __init__(self, action: str | int, target_from: tuple, target_to: tuple, slot_id: int):
         self.actions = [
             "Load",
             "Unload",
@@ -29,16 +29,16 @@ class Command:
             print("Invalid action")
             raise ValueError(f"Invalid action: {self.action}")
 
-        if container_id < 10000:
-            self.id = container_id + 10000 * (self.actions.index(self.action) + 1)
+        if slot_id < 1000:
+            self.id = slot_id + 1000 * (self.actions.index(self.action) + 1)
         else:
-            self.id = container_id
+            self.id = slot_id
 
         self.target_from = target_from
         self.target_to = target_to
 
     def get_data(self):
-        return [
+        data = [
             self.id,
             self.actions.index(self.action) + 1,
             self.target_from[0],
@@ -46,9 +46,11 @@ class Command:
             self.target_to[0],
             self.target_to[1]
         ]
+        data = [int(x) for x in data]
+        return data
 
-    def get_container_id(self):
-        return self.id % 10000
+    def get_slot_id(self):
+        return self.id % 1000
 
     def to_string(self):
         if self.action == "Load":
@@ -95,7 +97,7 @@ class CommunicationModule:
         else:
             self.state = registers[self.STATE_ADDRESS]
             self.error_code = registers[self.ERROR_CODE_ADDRESS]
-            if self.state == self.NEW_COMMAND or self.state == self.COMMAND_DONE:
+            if self.state == self.NEW_COMMAND or self.state == self.COMMAND_DONE or self.state == self.COMMAND_ERROR:
                 self.command = CommandHandler.registers_to_command(registers)
         return True
 
@@ -148,6 +150,11 @@ class CommunicationModule:
         registers.append(self.COMMAND_DONE)
         return self.write_registers(0, registers)
 
+    def send_command_error(self, command: Command):
+        registers = command.get_data()
+        registers.append(self.COMMAND_ERROR)
+        return self.write_registers(0, registers)
+
     @ staticmethod
     def registers_to_command(registers: list):
         if len(registers) < 6:
@@ -162,50 +169,65 @@ class CommunicationModule:
 
 
 class CommandHandler(CommunicationModule):
-    def __init__(self, host: str, xs: list, zs: list):
+    def __init__(self, host: str, name: str, targets: list, polling_time: float = 2):
         super().__init__(host, 502)  # Initialized on Modbus TCP port 502
 
-        self.xs = xs
-        self.zs = zs
+        self.name = name
+        self.targets = targets  # List of tuples of (x, z) coordinate
 
         self.commands = []
+        self.commands_done = []
+        self.commands_error = []
         self.history = []
 
-        self.file_path = Path(f"Database/{self.host}_handler.json")
+        self.polling_time = polling_time
+
+        self.file_path = Path(f"Database/{self.host}_{self.name}Handler.json")
 
         if not self.file_path.exists():
             # Create a new file with the default data structure
-            data = {"commands": [], "history": []}
+            data = {"commands": [], "history": [], "commands_done": [], "commands_error": []}
             with open(self.file_path, "w") as temp:
                 json.dump(data, temp)
         else:
             with open(self.file_path, "r") as temp:
                 data = json.load(temp)
             for register in data["commands"]:
-                print(register)
                 self.commands.append(self.registers_to_command(register))
             for register in data["history"]:
                 self.history.append(self.registers_to_command(register))
+            for register in data["commands_done"]:
+                self.commands_done.append(self.registers_to_command(register))
+            for register in data["commands_error"]:
+                self.commands_error.append(self.registers_to_command(register))
 
     def save(self):
         commands_temp = []
         history_temp = []
+        commands_done_temp = []
+        commands_error_temp = []
         for command in self.commands:
             commands_temp.append(command.get_data())
         for command in self.history:
             history_temp.append(command.get_data())
+        for command in self.commands_done:
+            commands_done_temp.append(command.get_data())
+        for command in self.commands_error:
+            commands_error_temp.append(command.get_data())
+
         with open(self.file_path, "w") as temp:
             data = {
                 "commands": commands_temp,
-                "history": history_temp
+                "history": history_temp,
+                "commands_done": commands_done_temp,
+                "commands_error": commands_error_temp
             }
+            print(data)
             json.dump(data, temp)
 
     def verify_target(self, target: tuple):
-        if target[0] < self.xs[0] or target[0] > self.xs[-1] or target[1] < self.zs[0] or target[1] > self.zs[-1]:
-            print("Verify target: Invalid target")
-            return False
-        return True
+        if target in self.targets:
+            return True
 
     def verify_command(self, command: Command):
         if command.action == "Load":
@@ -220,32 +242,34 @@ class CommandHandler(CommunicationModule):
     def add(self, command: Command):
         if self.verify_command(command):
             self.commands.append(command)
-            return command
-        return None
+            return True
+        return False
 
-    def add_load(self, target_to: tuple, container_id: int):
+    def add_load(self, target_to: tuple, slot_id: int):
         print(f"Load: target {target_to}: commands: {len(self.commands)}")
-        command = Command("Load", (0, 0), target_to, container_id)
+        command = Command("Load", (0, 0), target_to, slot_id)
         if self.add(command):
             print(command.to_string())
             return command
         return None
 
-    def add_unload(self, target_from: tuple, container_id: int):
-        command = Command("Unload", target_from, (0, 0), container_id)
+    def add_unload(self, target_from: tuple, slot_id: int):
+        command = Command("Unload", target_from, (0, 0), slot_id)
         if self.add(command):
             print(command.to_string())
             return command
         return None
 
-    def add_move(self, target_from: tuple, target_to: tuple, container_id: int):
-        command = Command("Move", target_from, target_to, container_id)
+    def add_move(self, target_from: tuple, target_to: tuple, slot_id: int):
+        command = Command("Move", target_from, target_to, slot_id)
         if self.add(command):
             print(command.to_string())
             return command
         return None
 
+    # Tasks
     def check(self):
+        print(f"CommandHandler '{self.host}' is checking PLC state")
         if not self.update():
             print("\nFailed to update data")
             return False
@@ -264,33 +288,56 @@ class CommandHandler(CommunicationModule):
 
         if self.state == self.COMMAND_DONE:
             print(f"\nCommand {self.command.to_string()} is done !!!")
+            self.commands_done.append(self.command)
             self.set_state(self.UNKNOWN)
 
         if self.state == self.COMMAND_ERROR:
             print(f"\nCommand error. Please check the command: {self.command.to_string()}")
-            print(f"Container: {self.command.get_container_id()}")
+            print(f"Container: {self.command.get_slot_id()}")
+            self.commands_error.append(self.command)
             self.set_state(self.UNKNOWN)
 
         if self.state == self.SYSTEM_ERROR:
             print(f"\nSystem error. Please check the error code: {self.error_code}")
 
+        self.save()
         return True
+
+    def run(self):
+        self.check()
+        Timer(self.polling_time, self.run).start()
+
+    def start(self):
+        print(f"Command handler {self.host} started")
+        self.run()
+
+    def stop(self):
+        self.save()
+        print(f"Command handler {self.host} stopped")
 
 
 class Simulator(CommunicationModule):
-    def __init__(self, host):
+    def __init__(self, host, name: str, targets: list, polling_time: float = 0.5, execution_time: float = 10):
         super().__init__(host, 502)
+
+        self.name = name
+        self.targets = targets  # List of tuples of (x, z) coordinate
 
         self.server = None
         self.data_bank = None
 
         self.commands = []
-        self.history = []
-        self.file_path = Path(f"Database/{self.host}_simulator.json")
+        self.commands_done = []
+
+        self.polling_time = polling_time
+        self.execution_time = execution_time
+        self.idle = True
+
+        self.file_path = Path(f"Database/{self.host}_{self.name}Simulator.json")
 
         if not self.file_path.exists():
             # Create a new file with the default data structure
-            data = {"commands": [], "history": []}
+            data = {"commands": [], "commands_done": []}
             with open(self.file_path, "w") as temp:
                 json.dump(data, temp)
         else:
@@ -298,23 +345,20 @@ class Simulator(CommunicationModule):
                 data = json.load(temp)
             for register in data["commands"]:
                 self.commands.append(self.registers_to_command(register))
-            for register in data["history"]:
-                self.history.append(self.registers_to_command(register))
-
-        if len(self.commands):
-            Timer(10, self.execute_command, [self.commands[0]]).start()
+            for register in data["commands_done"]:
+                self.commands_done.append(self.registers_to_command(register))
 
     def save(self):
         commands_temp = []
-        history_temp = []
+        commands_done_temp = []
         for command in self.commands:
             commands_temp.append(command.get_data())
-        for command in self.history:
-            history_temp.append(command.get_data())
+        for command in self.commands_done:
+            commands_done_temp.append(command.get_data())
         with open(self.file_path, "w") as temp:
             data = {
                 "commands": commands_temp,
-                "history": history_temp
+                "commands_done": commands_done_temp
             }
             json.dump(data, temp)
 
@@ -332,6 +376,72 @@ class Simulator(CommunicationModule):
         self.data_bank.set_words(0, registers)
         print("Registers initialized with initial values")
 
+    def verify_target(self, target: tuple):
+        if target in self.targets:
+            return True
+
+    def verify_command(self, command: Command):
+        if command.action == "Load":
+            return self.verify_target(command.target_to)
+        if command.action == "Unload":
+            return self.verify_target(command.target_from)
+        if command.action == "Unload":
+            return self.verify_target(command.target_from) and self.verify_target(command.target_to)
+        print(f"Verify command: Invalid command: {command.to_string()}")
+        return False
+
+    # Simulate execution of a command
+    def execute_next_command(self):
+        if self.commands:
+            print(f"\nExecuting command: {self.commands[0].to_string()}")
+            self.send_command_done(self.commands[0])
+            self.commands_done.append(self.commands[0])
+            self.commands.pop(0)
+            print(f"Command done.")
+
+            if self.commands:
+                print(f"Working command: {self.commands[0].to_string()}")
+                Timer(self.execution_time, self.execute_next_command).start()
+            else:
+                self.idle = True
+
+    # Task
+    def check(self):
+        if not self.update():
+            print("\nFailed to update data")
+            return
+
+        if self.state == self.READY or self.state == self.OCCUPIED:
+            if self.commands and self.idle:
+                self.idle = False
+                Timer(self.execution_time, self.execute_next_command).start()
+                print(f"Working command: {self.commands[0].to_string()}")
+
+        if self.state == self.NEW_COMMAND:
+            print("\nNew command received")
+            print(f"Received Command #{len(self.commands)}\n{self.command.to_string()}")
+            if self.verify_command(self.command):
+                self.commands.append(self.command)
+                self.set_state(self.UNKNOWN)
+            else:
+                print("Check: New command not valid")
+                self.send_command_error(self.command)
+
+        if self.state == self.UNKNOWN:
+            if len(self.commands) < 10 and not self.state == self.READY:
+                self.set_state(self.READY)
+
+            if not len(self.commands) < 10 and not self.state == self.OCCUPIED:
+                self.set_state(self.OCCUPIED)
+
+        return
+
+    def run(self):
+        print(self.state)
+        self.check()
+        self.save()
+        Timer(self.polling_time, self.run).start()
+
     def start(self):
         self.initialize_server()
         self.initialize_registers()
@@ -346,55 +456,3 @@ class Simulator(CommunicationModule):
         self.save()
         self.server.stop()
         print("Modbus server stopped")
-
-    def execute_command(self, command):
-        if command in self.commands:
-            print(f"\nExecuting command: {command.to_string()}")
-            while True:
-                if self.state == self.READY or self.state == self.OCCUPIED:
-                    self.send_command_done(command)
-                    break
-                print(f"Waiting for plc to be in a valid state {self.state}")
-                time.sleep(1)
-
-            self.commands.remove(command)
-            self.history.append(self.command)
-            print(f"Command done.")
-
-            if len(self.commands):
-                Timer(10, self.execute_command, [self.commands[0]]).start()
-            return True
-
-        print("Command not found")
-        return False
-
-    def run(self):
-        while True:
-            if not self.update():
-                print("\nFailed to update data")
-                time.sleep(1)
-                continue
-
-            if self.state == self.NEW_COMMAND:
-                print("\nNew command received")
-                print(f"Received Command #{len(self.commands)}\n{self.command.to_string()}")
-                if len(self.commands) == 0:
-                    Timer(10, self.execute_command, [self.command]).start()
-                self.commands.append(self.command)
-
-                if not self.set_state(self.UNKNOWN):
-                    print("\nFailed to set state")
-                    time.sleep(1)
-                    continue
-
-            if self.state == self.UNKNOWN:
-                if len(self.commands) < 10 and not self.state == self.READY:
-                    self.set_state(self.READY)
-
-                if not len(self.commands) < 10 and not self.state == self.OCCUPIED:
-                    self.set_state(self.OCCUPIED)
-
-            time.sleep(1)
-
-
-
