@@ -407,15 +407,11 @@ def generate_commands():
         for i, ch in enumerate(chs):
             print(f"Verify command: {command.to_string()} on PLC #{i}")
             if ch.verify_command(command):
-                print(f"Command can be sent to handler. Adding to queue")
                 ch.add(command)
                 commands_to_send.pop(index)
+                print(f"Command sent to handler: {ch.host}")
                 sent = True
                 break
-
-            print(f"Handler: {ch.host}")
-            print(f"Handler Status: {ch.state}")
-            print(f"Handler Queue Length: {len(ch.commands)}")
 
         # Increment index only if the command was not sent
         if not sent:

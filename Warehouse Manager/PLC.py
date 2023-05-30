@@ -218,9 +218,9 @@ class CommandHandler(CommunicationModule):
         with open(self.file_path, "w") as temp:
             data = {
                 "commands": commands_temp,
-                "history": history_temp,
                 "commands_done": commands_done_temp,
-                "commands_error": commands_error_temp
+                "commands_error": commands_error_temp,
+                "history": history_temp
             }
             print(data)
             json.dump(data, temp)
@@ -304,6 +304,7 @@ class CommandHandler(CommunicationModule):
         self.save()
         return True
 
+    # Loop
     def run(self):
         self.check()
         Timer(self.polling_time, self.run).start()
@@ -391,7 +392,7 @@ class Simulator(CommunicationModule):
         print(f"Verify command: Invalid command: {command.to_string()}")
         return False
 
-    # Simulate execution of a command
+    # Temporized task
     def execute_next_command(self):
         if self.commands:
             print(f"\nExecuting command: {self.commands[0].to_string()}")
@@ -437,6 +438,7 @@ class Simulator(CommunicationModule):
 
         return
 
+    # Loop
     def run(self):
         print(self.state)
         self.check()
