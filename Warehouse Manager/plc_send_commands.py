@@ -17,8 +17,6 @@ ch.add_load((1, 1), 1)
 ch.add_unload((1, 2), 22)
 ch.add_load((1, 2), 22)
 
-
-
 try:
     ch.start()
 except KeyboardInterrupt:
