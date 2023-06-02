@@ -273,7 +273,7 @@ class CommandHandler(CommunicationModule):
         if not self.update():
             print("\nFailed to update data")
             return False
-        print(f"State: {self.state}")
+        print(f"\nState: {self.state}")
 
         if self.state == self.READY and len(self.commands) != 0:
             command = self.commands[0]
