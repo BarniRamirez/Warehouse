@@ -1,7 +1,7 @@
 """
 Test PLC sending commands through modbus.
 Targets compatible with Warehouse test machine in automation lab.
-Use the host ip of the provided PLC
+Use localhost for testing.
 """
 from PLC import CommandHandler
 
@@ -11,7 +11,7 @@ Zn = 3
 
 # Command Handler initialization
 available_targets = [(x, z) for x in range(1, Xn + 1) for z in range(1, Zn + 1)]
-ch = CommandHandler(host="192.168.0.10", name="test", targets=available_targets, polling_time=2)
+ch = CommandHandler(host="localhost", name="local_test", targets=available_targets, polling_time=2)
 
 # Commands to send
 ch.add_load((1, 1), 1)

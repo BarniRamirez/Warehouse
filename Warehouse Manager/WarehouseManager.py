@@ -38,7 +38,7 @@ departures['Deadline'] = pd.to_datetime(departures['Deadline'])
 
 enumerations = pd.read_excel(r"Database\Components.xlsx", sheet_name='Enumerations', index_col='Enumeration')
 
-with open(r"Database/dispatching_temp.json", "r") as f:
+with open(r"Database/Temp/dispatching_temp.json", "r") as f:
     dispatching_lots = json.load(f)
 
 print(items.to_string())
@@ -60,7 +60,7 @@ def save_to_database():
     with pd.ExcelWriter(r"Database/Orders.xlsx", mode='a', if_sheet_exists='replace') as writer:
         arrivals.to_excel(writer, sheet_name='Arrivals', index=False)
         departures.to_excel(writer, sheet_name='Departures', index=False)
-    with open("Database/dispatching_temp.json", "w") as temp:
+    with open("Database/Temp/dispatching_temp.json", "w") as temp:
         json.dump(dispatching_lots, temp)
 
 

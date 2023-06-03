@@ -150,29 +150,30 @@ print(items.to_string())
 #     containers.loc[container_index] = container
 #     print(f"\nFilled Container:\n\n{containers.loc[container_index].to_string()}\n\n")
 
-# Reinitialize database
-for s, slot in slots.iterrows():
-    slots.loc[s, 'State'] = 'Free'
-    slots.loc[s, 'Container'] = 0
-    slots.loc[s, 'Items'].clear()
 
-for c, cont in containers.iterrows():
-    containers.loc[c, 'State'] = 'Free'
-    containers.loc[c, 'Slot'] = 0
-    containers.loc[c, 'Priority'] = 0
-    containers.loc[c, 'Item Types'] = 0
-    containers.loc[c, 'Filled'] = 0
-    containers.loc[c, 'Filling'] = 0
-    containers.loc[c, 'Items'].clear()
-
-
-with pd.ExcelWriter(r"Database/Components.xlsx", mode='a', if_sheet_exists='replace') as writer:
-    slots.to_excel(writer, sheet_name='Slots', index=False)
-    containers.to_excel(writer, sheet_name='Containers', index=False)
-
-with open("Database/dispatching_temp.json", "w") as temp:
-    json.dump([], temp)
-
-with open("Database/commands_temp.json", "w") as temp:
-    json.dump([], temp)
+# # Reinitialize database
+# for s, slot in slots.iterrows():
+#     slots.loc[s, 'State'] = 'Free'
+#     slots.loc[s, 'Container'] = 0
+#     slots.loc[s, 'Items'].clear()
+#
+# for c, cont in containers.iterrows():
+#     containers.loc[c, 'State'] = 'Free'
+#     containers.loc[c, 'Slot'] = 0
+#     containers.loc[c, 'Priority'] = 0
+#     containers.loc[c, 'Item Types'] = 0
+#     containers.loc[c, 'Filled'] = 0
+#     containers.loc[c, 'Filling'] = 0
+#     containers.loc[c, 'Items'].clear()
+#
+#
+# with pd.ExcelWriter(r"Database/Components.xlsx", mode='a', if_sheet_exists='replace') as writer:
+#     slots.to_excel(writer, sheet_name='Slots', index=False)
+#     containers.to_excel(writer, sheet_name='Containers', index=False)
+#
+# with open("Database/Temp/dispatching_temp.json", "w") as temp:
+#     json.dump([], temp)
+#
+# with open("Database/Temp/commands_temp.json", "w") as temp:
+#     json.dump([], temp)
 
