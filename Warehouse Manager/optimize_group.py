@@ -2,21 +2,11 @@ import numpy as np
 import pandas as pd
 from mip import Model, xsum, maximize, BINARY
 
-# relations = pandas.read_excel('Database/Items.xlsx', sheet_name='Relations')
-# items = pandas.read_excel('Database/Items.xlsx', sheet_name='Items')
 
-
-def optimize_group(elements: list, items:pd.DataFrame, relations:pd.DataFrame):
+def optimize_group(elements: list, items: pd.DataFrame, relations: pd.DataFrame):
     """
     Function that implements the optimization algorithm for creating product groups.
-    :param elements: list of dictionaries containing the names and quantities of products to be added
-    :param correlation_matrix: correlation matrix between the elements
-    :param demands: list of integers containing the quantity of products to be purchased for each element
-    :param stored_quantities: list of integers containing the quantity of products in stock for each element
-    :return: list of dictionaries containing the names and quantities of products to be added
     """
-
-    print(f"list length: {len(elements)}")
 
     # Acquisition of the quantity of products in stock
     demands = []

@@ -384,6 +384,8 @@ class CommandHandler(CommunicationModule):
 
         if self.state == self.SYSTEM_ERROR:
             print(f"\nSystem error. Please check the error code: {self.error_code}")
+
+        self.save()
         return True
 
     # Loop

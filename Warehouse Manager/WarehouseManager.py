@@ -15,15 +15,19 @@ containers = pd.read_excel(r"Database\Components.xlsx", sheet_name='Containers')
 containers['Items'] = containers['Items'].apply(ast.literal_eval)
 
 chs = [
-    # CommandHandler('192.168.0.10', "Area1",  # Handles commands for Area1
-    #                targets=slots.loc[slots['Area'] == 1].apply(lambda row: (row['TargetX'], row['TargetZ']),
-    #                                                            axis=1).tolist()),
-    CommandHandler('localhost', "all",  # Handles commands for all areas
-                   targets=slots.loc[slots['Area'] > 0].apply(lambda row: (row['TargetX'], row['TargetZ']),
+    CommandHandler('192.168.0.10', "Area1",  # Handles commands for Area1
+                   targets=slots.loc[slots['Area'] == 1].apply(lambda row: (row['TargetX'], row['TargetZ']),
+                                                               axis=1).tolist()),
+    CommandHandler('localhost', "Area2-3",  # Handles commands for Area2 and Area3
+                   targets=slots.loc[slots['Area'] > 1].apply(lambda row: (row['TargetX'], row['TargetZ']),
                                                               axis=1).tolist())
+    # CommandHandler('localhost', "all",  # Handles commands for all areas
+    #                targets=slots.loc[slots['Area'] > 0].apply(lambda row: (row['TargetX'], row['TargetZ'])
+    #                                                           axis=1).tolist())
 ]
 commands_to_send = []
-commands_received = []
+commands_done = []
+commands_error = []
 
 items = pd.read_excel(r"Database\Items.xlsx", sheet_name='Items')
 relations = pd.read_excel(r"Database\Items.xlsx", sheet_name='Relations')
@@ -66,7 +70,7 @@ def save_to_database():
         json.dump(dispatching_lots, temp)
 
 
-def update_states():
+def update_arrivals():
     # Update Arrivals State
     mask = (arrivals['State'] == 'Scheduled') & (arrivals['Arrival Time'] < pd.Timestamp.now())
     arrivals.loc[mask, 'State'] = 'Arrived'
@@ -74,27 +78,6 @@ def update_states():
     mask = (arrivals['State'] == 'Arrived') & (arrivals['Dispatch Time'] < pd.Timestamp.now())
     arrivals.loc[mask, 'State'] = 'Dispatching'
 
-    # Update Slots State
-    mask = ((slots['State'] == 'Free') | (slots['State'] == 'Booked')) & (
-        slots['ID'].isin(containers.loc[containers['State'] == 'Loading', 'Slot']))
-    slots.loc[mask, 'State'] = 'Loading'
-
-    mask = (slots['State'] == 'Occupied') & (
-        slots['ID'].isin(containers.loc[containers['State'] == 'Unloading', 'Slot']))
-    slots.loc[mask, 'State'] = 'Unloading'
-
-    mask = (slots['State'] == 'Loading') & (slots['ID'].isin(containers.loc[containers['State'] == 'Stored', 'Slot']))
-    slots.loc[mask, 'State'] = 'Occupied'
-
-    # empty_containers = (containers['State'] == 'Loading') & (len(containers['Items']) == 0)
-    # print(f"\nEmpty Containers: \n{empty_containers}\n")
-    # mask = (slots['State'] == 'Loading') & (slots['ID'].isin(containers.loc[empty_containers, 'Slot']))
-    # slots.loc[mask, 'State'] = 'Free'
-    # containers.loc[empty_containers, 'State'] = 'Free'
-    # containers.loc[empty_containers, 'Slot'] = 0
-
-
-def update_dispatching():
     mask = arrivals['State'] == 'Dispatching'
     for cargo in arrivals.loc[mask, 'Items'].values:
         # print(f"Cargo: {cargo}")
@@ -107,6 +90,7 @@ def update_dispatching():
                 dispatching_lots[dispatching_names.index(lot['Name'])]['Quantity'] += lot['Quantity']
     arrivals.loc[mask, 'State'] = 'Dispatched'
     print(f"\n{dispatching_lots = }")
+    print(f"{len(dispatching_lots) = }")
 
 
 def verify_dimensions(container: pd.Series, item_names: list, quantity: int):
@@ -285,8 +269,7 @@ def book_free_slot(container: pd.Series):
         slot_index = slots.loc[mask, 'Path Weight'].idxmin()
         slots.loc[slot_index, 'State'] = 'Booked'
         slots.loc[slot_index, 'Container'] = container['ID']
-        slots.loc[slot_index, 'Items'].extend(container['Items'])
-        slots.loc[slot_index, 'Items Count'] += len(slots.loc[slot_index, 'Items'])
+
         print(f"\nBooked slot: {slots.loc[slot_index, 'ID']}")
         print(f"Path Weight: {slots.loc[slot_index, 'Path Weight']}")
         print(f"With container: {slots.loc[slot_index, 'Container']}\n")
@@ -324,6 +307,8 @@ Finally, it prints the filled container and assigned slot.
 
     containers.loc[container_index, 'State'] = 'Loading'
     containers.loc[container_index, 'Priority'] = containers.loc[:, 'Priority'].max() + 1
+    containers.loc[container_index, 'Items Count'] = sum(
+        [item['Quantity'] for item in containers.loc[container_index, 'Items']])
 
     # Book a slot for the container
     print(f"\nBooking a slot for the container: {containers.loc[container_index, 'ID']}")
@@ -335,7 +320,7 @@ Finally, it prints the filled container and assigned slot.
     containers.loc[container_index, 'Slot'] = slots.loc[slot_index, 'ID']
 
     # Update Stored Quantity
-    for item in slots.loc[slot_index, 'Items']:
+    for item in containers.loc[container_index, 'Items']:
         item_index = items.loc[items['Name'] == item['Name']].index[0]
         items.loc[item_index, 'Stored Quantity'] += item['Quantity']
 
@@ -344,21 +329,31 @@ Finally, it prints the filled container and assigned slot.
 
 
 def fulfill_departures():
-    # Select the 10 most urgent departures and their items
-    departures.sort_values('Deadline', ignore_index=True)
+    mask = (containers['State'] == 'Stored') & (containers['Priority'] == 0)
+    # print(mask.values)
+    if not any(mask):
+        print("No containers for fulfillment")
+        return
+
+    # Select the 20 most urgent departures and their items
+    departures.sort_values('Deadline')
 
     items_to_unload = []
-    for d, departure in departures.tail(10).iterrows():
+    # print(departures.head(20).to_string())
+    for d, departure in departures.head(20).iterrows():
         for lot in departure['Items']:
-            if lot['Name'] in items_to_unload:
-                index = items_to_unload.index(lot['Name'])
+            items_to_unload_names = [l['Name'] for l in items_to_unload]
+            if lot['Name'] in items_to_unload_names:
+                index = items_to_unload_names.index(lot['Name'])
                 items_to_unload[index]['Quantity'] += lot['Quantity']
             else:
-                items_to_unload.append(lot)
-    items_to_unload_names = [lot['Name'] for lot in items_to_unload]
+                items_to_unload.append(lot.copy())
+
+    items_to_unload_names = [l['Name'] for l in items_to_unload]
+    print(f"\n{items_to_unload = }")
 
     unload_capacities = []  # {container_index: int, capacity: int, will_be_empty: bool}
-    for c, container in containers.loc[containers['State'] == 'Stored'].iterrows():
+    for c, container in containers.loc[mask].iterrows():
         container_quantity = 0
         data = {
             'Container Index': c,
@@ -367,30 +362,42 @@ def fulfill_departures():
         }
         for lot in container['Items']:
             container_quantity += lot['Quantity']
+            # Unloading capacity computed on items to unload
             if lot['Name'] in items_to_unload_names:
-                index = items_to_unload.index(lot['Name'])
+                index = items_to_unload_names.index(lot['Name'])
                 data['Capacity'] += min(lot['Quantity'], items_to_unload[index]['Quantity'])
+                # print(f"Container with capabilities {lot['Name'] = } and {lot['Quantity'] = } and {items_to_unload[index]['Quantity'] = }")
 
         if container_quantity == data['Capacity']:
             data['Will Be Empty'] = True
 
         unload_capacities.append(data)
 
-    unloading_capacities_df = pd.DataFrame(unload_capacities).sort('Capacity', ascending=False)
+    unloading_capacities_df = pd.DataFrame(unload_capacities).sort_values('Capacity', ascending=False)
     print(unloading_capacities_df)
+
+    # Unload the container with the highest unloading capacity
+
+    # Put the departures with those items in picking
+
     return
+
+
+def picking():
+    # Checks all Retrieved containers and picks the items necessary to fulfill the departures
+    pass
 
 
 def generate_load():
     mask = (containers['State'] == 'Loading') & (containers['Priority'] != 0)
-    if not mask.any():
+    if not any(mask):
         print("No containers to load")
         return
     container_index = containers.loc[mask, 'Priority'].idxmin()
     # print(container_index)
 
-    mask = (slots['ID'] == containers.loc[container_index, 'Slot']) & (slots['State'] == 'Loading')
-    if not mask.any():
+    mask = (slots['ID'] == containers.loc[container_index, 'Slot']) & (slots['State'] == 'Booked')
+    if not any(mask):
         print("No slot to load")
         return
 
@@ -399,25 +406,34 @@ def generate_load():
     # print(target)
 
     commands_to_send.append(Command('Load', (0, 0), target, slots.loc[slot_index, 'ID']))
-    # sent = False
-    # for ch in chs:
-    #     sent = False
-    #     if ch.add_load(target, slots.loc[slot_index, 'ID']):
-    #         print(f"Load command added to queue: {ch.commands[-1].to_string()}")
-    #         print(f"CommandHandler: {ch.host}")
-    #         sent = True
-    #         break
-    #
-    # if not sent:
-    #     print("Load command not sent")
-    #     commands_to_send.append(Command('Load', (0, 0), target, slots.loc[slot_index, 'ID']))
+    containers.loc[container_index, 'Priority'] = 0
 
+
+def generate_unload():
+    mask = (containers['State'] == 'Unloading') & (containers['Priority'] != 0)
+    if not any(mask):
+        print("No containers to unload")
+        return
+    container_index = containers.loc[mask, 'Priority'].idxmin()
+    # print(container_index)
+
+    mask = (slots['ID'] == containers.loc[container_index, 'Slot']) & (slots['State'] == 'Occupied')
+    if not any(mask):
+        print("No slot to unload")
+        return
+
+    slot_index = slots.loc[mask].index[0]
+    target = (slots.loc[slot_index, 'TargetX'], slots.loc[slot_index, 'TargetZ'])
+    # print(target)
+
+    commands_to_send.append(Command('Unload', target, (0, 0), slots.loc[slot_index, 'ID']))
     containers.loc[container_index, 'Priority'] = 0
 
 
 def generate_commands():
     # if not commands_to_send:
     generate_load()
+    generate_unload()
     print(f"\n{len(commands_to_send) = }")
 
     # Send commands to all handlers
@@ -439,18 +455,58 @@ def generate_commands():
             index += 1
 
 
+def check_handlers():
+    for ch in chs:
+        ch.check()
+
+        # Get commands done
+        if ch.commands_done:
+            commands_done.extend(ch.commands_done)
+            ch.commands_done.clear()
+
+    # Update database consistently with commands_done
+    for command in commands_done:
+        slot_id = command.id % 1000  # action multiplier
+        slot_index = slots.loc[slots['ID'] == slot_id].index[0]
+        container_index = containers.loc[containers['Slot'] == slot_id].index[0]
+
+        if command.action == 'Load':
+            slots.loc[slot_index, 'Items'].clear()
+            slots.loc[slot_index, 'Items'].extend(containers.loc[container_index, 'Items'])
+            slots.loc[slot_index, 'Items Count'] = sum([item['Quantity'] for item in slots.loc[slot_index, 'Items']])
+            slots.loc[slot_index, 'Loads Count'] += 1
+            slots.loc[slot_index, 'State'] = 'Occupied'
+
+            containers.loc[container_index, 'Loads Count'] += 1
+            containers.loc[container_index, 'State'] = 'Stored'
+
+        elif command.action == 'Unload':
+            slots.loc[slot_index, 'Items'].clear()
+            slots.loc[slot_index, 'Items Count'] = 0
+            slots.loc[slot_index, 'State'] = 'Free'
+
+            containers.loc[container_index, 'State'] = 'Retrieved'
+
+        print(f"\nSlot: {slots.loc[slot_index, 'ID']} updated. State: {slots.loc[slot_index, 'State']}")
+        print(
+            f"Container: {containers.loc[container_index, 'ID']} updated. State: {containers.loc[container_index, 'State']}")
+        commands_done.remove(command)
+
+
 def main():
     # Start main loop
     try:
         while True:
             print(f"\n\n\n------------ NEW ITERATION ------------")
-            update_dispatching()
+
+            update_arrivals()
             dispatch_arrivals()
-            # fulfill_departures()
-            update_states()
+
+            fulfill_departures()
+            picking()
+
             generate_commands()
-            for ch in chs:
-                ch.check()
+            check_handlers()
 
             # save_to_database()
             # time.sleep(1)
