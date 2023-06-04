@@ -208,7 +208,7 @@ class CommandHandler(CommunicationModule):
 
         if not self.file_path.exists():
             # Create a new file with the default data structure
-            data = {"commands": [], "history": [], "commands_done": [], "commands_error": []}
+            data = {"commands": [], "commands_sent": [], "commands_done": [], "commands_error": [], "history": []}
             with open(self.file_path, "w") as temp:
                 json.dump(data, temp)
         else:

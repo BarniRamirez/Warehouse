@@ -4,6 +4,8 @@ import json
 import math
 import ast
 
+from optimize_group import *
+
 from PLC import Command, CommandHandler
 
 # Global Variables
@@ -13,12 +15,12 @@ containers = pd.read_excel(r"Database\Components.xlsx", sheet_name='Containers')
 containers['Items'] = containers['Items'].apply(ast.literal_eval)
 
 chs = [
-    CommandHandler('192.168.0.10', "Area1",  # Handles commands for Area1
-                   targets=slots.loc[slots['Area'] == 1].apply(lambda row: (row['TargetX'], row['TargetZ']),
-                                                               axis=1).tolist()),
-    # CommandHandler('localhost', "Global",  # Handles commands for all areas
-    #                targets=slots.loc[slots['Area'] > 0].apply(lambda row: (row['TargetX'], row['TargetZ']),
-    #                                                           axis=1).tolist())
+    # CommandHandler('192.168.0.10', "Area1",  # Handles commands for Area1
+    #                targets=slots.loc[slots['Area'] == 1].apply(lambda row: (row['TargetX'], row['TargetZ']),
+    #                                                            axis=1).tolist()),
+    CommandHandler('localhost', "all",  # Handles commands for all areas
+                   targets=slots.loc[slots['Area'] > 0].apply(lambda row: (row['TargetX'], row['TargetZ']),
+                                                              axis=1).tolist())
 ]
 commands_to_send = []
 commands_received = []
@@ -94,10 +96,17 @@ def update_states():
 
 def update_dispatching():
     mask = arrivals['State'] == 'Dispatching'
-    for value in arrivals.loc[mask, 'Items'].values:
-        dispatching_lots.extend(list(value))
+    for cargo in arrivals.loc[mask, 'Items'].values:
+        # print(f"Cargo: {cargo}")
+        for lot in cargo:
+            # print(f"Lot: {lot}")
+            dispatching_names = [l['Name'] for l in dispatching_lots]
+            if lot['Name'] not in dispatching_names:
+                dispatching_lots.append(lot)
+            else:
+                dispatching_lots[dispatching_names.index(lot['Name'])]['Quantity'] += lot['Quantity']
     arrivals.loc[mask, 'State'] = 'Dispatched'
-    print(dispatching_lots)
+    print(f"\n{dispatching_lots = }")
 
 
 def verify_dimensions(container: pd.Series, item_names: list, quantity: int):
@@ -110,13 +119,18 @@ def verify_dimensions(container: pd.Series, item_names: list, quantity: int):
         # print(f"Item: {item['Name']}, Group volume: {item['Volume']*quantity}, Remaining Volume: {container['Volume'] - filled_volume}")
 
         container_dimensions_temp = container_dimensions
-        for i, i_dim in enumerate(item_dimensions):
-            for c, c_dim in enumerate(container_dimensions_temp):
-                if c_dim > i_dim:
-                    container_dimensions_temp.pop(c)
-                    break
+        item_dimensions_temp = item_dimensions
 
+        # Verify that the container can fit the item.
+        for i in range(len(container_dimensions)):
+            # print(f"{container_dimensions_temp = },  {item_dimensions_temp = }")
+            if max(container_dimensions_temp) >= max(item_dimensions_temp):
+                container_dimensions_temp.remove(max(container_dimensions_temp))
+                item_dimensions_temp.remove(max(item_dimensions_temp))
+
+        # Verify that the container volume is enough to fit the wale quantity of items.
         filled_volume += item['Volume'] * quantity
+        # print(f"{filled_volume = },  {container['Volume'] = },  {container['Volume'] >= filled_volume}, {len(container_dimensions_temp) == 0}")
         if not (len(container_dimensions_temp) == 0 and container['Volume'] >= filled_volume):
             return False
     return True
@@ -125,8 +139,9 @@ def verify_dimensions(container: pd.Series, item_names: list, quantity: int):
 def select_container(item_names: list, total_quantity: int):
     # Select the first container that can fit the items.
     item_quantity = round(total_quantity / len(item_names))
-    mask = pd.Series(False, containers.index)
     while True:
+        print(f"{item_quantity = }")
+        mask = pd.Series(False, containers.index)
         if item_quantity < 1:
             break
         mask = (
@@ -143,7 +158,7 @@ def select_container(item_names: list, total_quantity: int):
         return None
 
     container_index = containers.index[mask].values[0]
-    print(f"\nFitting container: \n{containers.loc[container_index]}\n")
+    print(f"\nFitting container ID: {containers.loc[container_index, 'ID']}\n")
 
     return container_index
 
@@ -226,7 +241,7 @@ def book_free_slot(container: pd.Series):
     mask = containers.apply(lambda x: are_similar(x, container), axis=1)
 
     if mask.any():
-        print(f"\n\nEqual container found.\n\n")
+        print(f"\nEqual container found.\n")
         similar_slots = containers.loc[mask, 'Slot'].values
         print(similar_slots)
         equal_slots_indexes = slots.index[slots['ID'].isin(similar_slots)].values
@@ -236,39 +251,44 @@ def book_free_slot(container: pd.Series):
         path_distance_from_equal = 6
         while True:
             mask = pd.Series(True, slots.index)
+            path_weights_to_avoid = []
             # print(mask.values)
             for esi in equal_slots_indexes:
-                print(f"\nSimilar slot: {slots.loc[esi, 'ID']} "
-                      f"Path Weight of similar slot: {slots.loc[esi, 'Path Weight']}")
+                # print(f"\nSimilar slot: {slots.loc[esi, 'ID']} "
+                #       f"Path Weight of similar slot: {slots.loc[esi, 'Path Weight']}")
+
                 filter_max = slots.loc[esi, 'Path Weight'] + path_distance_from_equal
                 filter_min = slots.loc[esi, 'Path Weight'] - path_distance_from_equal
-                print(f"Avoiding Weights from: {filter_min} to {filter_max}")
+                # print(f"Avoiding Weights from: {filter_min} to {filter_max}")
+                path_weights_to_avoid.extend(list(range(filter_min, filter_max)))
                 mask = mask & ((slots['Path Weight'] > filter_max) | (slots['Path Weight'] < filter_min))
 
             mask = mask & (slots['Type'] == container['Type']) & (slots['State'] == 'Free')
-
+            path_weights_to_avoid = list(set(path_weights_to_avoid))
+            print(f"\n{path_weights_to_avoid = }")
             # print(mask.values)
             if any(mask):
                 break
             if path_distance_from_equal == 0:
                 break
             path_distance_from_equal -= 1
-            print(f"\n\nDecreasing path distance from equal to: {path_distance_from_equal}")
+            print(f"Decreasing path distance from equal to: {path_distance_from_equal}")
 
     else:
-        print(f"\n\nNot equal container found.\n\n")
+        print(f"\nNot equal container found.\nNo constrains on path weight")
         # Select all free slots compatible with the container
         mask = (slots['Type'] == container['Type']) & (slots['State'] == 'Free')
 
     # Select the slot with the lowest path weight
     if any(mask):
-        print("Book the suitable slot with the lowest path weight")
+        print("Book a suitable slot while respecting the path weight constraints")
         slot_index = slots.loc[mask, 'Path Weight'].idxmin()
         slots.loc[slot_index, 'State'] = 'Booked'
         slots.loc[slot_index, 'Container'] = container['ID']
         slots.loc[slot_index, 'Items'].extend(container['Items'])
         slots.loc[slot_index, 'Items Count'] += len(slots.loc[slot_index, 'Items'])
-        print(f"\nBooked slot: {slots.loc[slot_index, 'ID']}. Path Weight: {slots.loc[slot_index, 'Path Weight']}")
+        print(f"\nBooked slot: {slots.loc[slot_index, 'ID']}")
+        print(f"Path Weight: {slots.loc[slot_index, 'Path Weight']}")
         print(f"With container: {slots.loc[slot_index, 'Container']}\n")
         return slot_index
 
@@ -285,12 +305,14 @@ Finally, it prints the filled container and assigned slot.
 
     """
     # Select four items
-    selected_lots = dispatching_lots[: min(4, len(dispatching_lots))]
-    item_names = [lot['Name'] for lot in selected_lots]
-    print(f"\nSelected lots: {selected_lots}")
-    n = len(selected_lots)
-    if not n:
+    if len(dispatching_lots) < 4:
         return
+
+    print(f"\nSelecting the four best items to load together")
+    item_names = optimize_group(dispatching_lots, items, relations)
+    # selected_lots = dispatching_lots[:4]
+    # item_names = [lot['Name'] for lot in selected_lots]
+    print(f"\n{item_names = }")
 
     # Select a suitable container
     container_index = select_container(item_names, 60)
@@ -298,14 +320,13 @@ Finally, it prints the filled container and assigned slot.
         return
 
     # Fill container with selected items
-    selected_items_name = [lot['Name'] for lot in selected_lots]
-    fill_with_many_items(selected_items_name, container_index, 95)
+    fill_with_many_items(item_names, container_index, 95)
 
     containers.loc[container_index, 'State'] = 'Loading'
     containers.loc[container_index, 'Priority'] = containers.loc[:, 'Priority'].max() + 1
 
     # Book a slot for the container
-    print(f"\nBooking a slot for the container: \n{containers.loc[container_index, 'ID']}\n")
+    print(f"\nBooking a slot for the container: {containers.loc[container_index, 'ID']}")
     slot_index = book_free_slot(containers.loc[container_index])
     if slot_index is None:
         containers.loc[container_index, 'State'] = 'Waiting'
@@ -318,7 +339,7 @@ Finally, it prints the filled container and assigned slot.
         item_index = items.loc[items['Name'] == item['Name']].index[0]
         items.loc[item_index, 'Stored Quantity'] += item['Quantity']
 
-    print(f"\nFilled container: \n{containers.loc[container_index]}\n \nSlot: {slots.loc[slot_index, 'ID']}\n")
+    # print(f"\nFilled container: {containers.loc[container_index, 'ID']} \nSlot: {slots.loc[slot_index, 'ID']}\n")
     return
 
 
@@ -366,7 +387,7 @@ def generate_load():
         print("No containers to load")
         return
     container_index = containers.loc[mask, 'Priority'].idxmin()
-    print(container_index)
+    # print(container_index)
 
     mask = (slots['ID'] == containers.loc[container_index, 'Slot']) & (slots['State'] == 'Loading')
     if not mask.any():
@@ -375,7 +396,7 @@ def generate_load():
 
     slot_index = slots.loc[mask].index[0]
     target = (slots.loc[slot_index, 'TargetX'], slots.loc[slot_index, 'TargetZ'])
-    print(target)
+    # print(target)
 
     commands_to_send.append(Command('Load', (0, 0), target, slots.loc[slot_index, 'ID']))
     # sent = False
@@ -397,7 +418,7 @@ def generate_load():
 def generate_commands():
     # if not commands_to_send:
     generate_load()
-    print(f"{commands_to_send = }")
+    print(f"\n{len(commands_to_send) = }")
 
     # Send commands to all handlers
     index = 0
@@ -409,7 +430,7 @@ def generate_commands():
             if ch.verify_command(command):
                 ch.add(command)
                 commands_to_send.pop(index)
-                print(f"Command sent to handler: {ch.host}")
+                print(f"Command added to handler: {ch.host}")
                 sent = True
                 break
 
@@ -419,13 +440,10 @@ def generate_commands():
 
 
 def main():
-    # # Start polling PLCs in separate threads
-    # for ch in chs:
-    #     ch.start()
-
     # Start main loop
     try:
         while True:
+            print(f"\n\n\n------------ NEW ITERATION ------------")
             update_dispatching()
             dispatch_arrivals()
             # fulfill_departures()
@@ -441,10 +459,6 @@ def main():
         save_to_database()
         print("\nProgram terminated by user.")
         exit(0)
-    # except Exception as e:
-    #     save_to_database()
-    #     print(f"Exception Raised: \n{e}")
-    #     exit(1)
 
 
 if __name__ == "__main__":

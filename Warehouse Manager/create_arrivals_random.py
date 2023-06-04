@@ -1,10 +1,11 @@
 import pandas as pd
 import random
-import json
 
 
-arrivals_amount = 20
+arrivals_amount = 10
 id_start = 50001
+arrival_delay_max = 1
+dispatch_delay_max = 1
 append_arrivals = False
 
 
@@ -62,8 +63,8 @@ for a in range(0, arrivals_amount):
 
     # Create Arrival
     current_time = pd.Timestamp.now()
-    arrival_delay = pd.DateOffset(seconds=random.randint(0, 1))
-    dispatch_delay = pd.DateOffset(seconds=random.randint(0, 1))
+    arrival_delay = pd.DateOffset(seconds=random.randint(0, arrival_delay_max))
+    dispatch_delay = pd.DateOffset(seconds=random.randint(0, dispatch_delay_max))
     arrivals.append({
         "ID": id_start + len(arrivals_df) + a,
         "State": 'Scheduled',

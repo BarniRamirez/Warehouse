@@ -8,13 +8,13 @@ import json
 
 # Import default database
 
-slots = pd.read_excel(r"Database\Defaults\Components.xlsx", sheet_name='Slots')
+slots = pd.read_excel(r"Defaults/Components_default.xlsx", sheet_name='Slots')
 slots['Items'] = slots['Items'].apply(ast.literal_eval)
-containers = pd.read_excel(r"Database\Defaults\Components.xlsx", sheet_name='Containers')
+containers = pd.read_excel(r"Defaults/Components_default.xlsx", sheet_name='Containers')
 containers['Items'] = containers['Items'].apply(ast.literal_eval)
 
-items = pd.read_excel(r"Database\Defaults\Items.xlsx", sheet_name='Items')
-relations = pd.read_excel(r"Database\Defaults\Items.xlsx", sheet_name='Relations')
+items = pd.read_excel(r"Defaults/Items_default.xlsx", sheet_name='Items')
+relations = pd.read_excel(r"Defaults/Items_default.xlsx", sheet_name='Relations')
 
 # Reset warehouse database
 
