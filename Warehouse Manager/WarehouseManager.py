@@ -1,4 +1,5 @@
 import pandas as pd
+from pathlib import Path
 import json
 # import time
 import math
@@ -15,15 +16,15 @@ containers = pd.read_excel(r"Database\Components.xlsx", sheet_name='Containers')
 containers['Items'] = containers['Items'].apply(ast.literal_eval)
 
 chs = [
-    CommandHandler('192.168.0.10', "Area1",  # Handles commands for Area1
-                   targets=slots.loc[slots['Area'] == 1].apply(lambda row: (row['TargetX'], row['TargetZ']),
-                                                               axis=1).tolist()),
-    CommandHandler('localhost', "Area2-3",  # Handles commands for Area2 and Area3
-                   targets=slots.loc[slots['Area'] > 1].apply(lambda row: (row['TargetX'], row['TargetZ']),
+    # CommandHandler('192.168.0.10', "Area1",  # Handles commands for Area1
+    #                targets=slots.loc[slots['Area'] == 1].apply(lambda row: (row['TargetX'], row['TargetZ']),
+    #                                                            axis=1).tolist()),
+    # CommandHandler('localhost', "Area2-3",  # Handles commands for Area2 and Area3
+    #                targets=slots.loc[slots['Area'] > 1].apply(lambda row: (row['TargetX'], row['TargetZ']),
+    #                                                           axis=1).tolist()),
+    CommandHandler('localhost', "all",  # Handles commands for all areas
+                   targets=slots.loc[slots['Area'] > 0].apply(lambda row: (row['TargetX'], row['TargetZ']),
                                                               axis=1).tolist())
-    # CommandHandler('localhost', "all",  # Handles commands for all areas
-    #                targets=slots.loc[slots['Area'] > 0].apply(lambda row: (row['TargetX'], row['TargetZ'])
-    #                                                           axis=1).tolist())
 ]
 commands_to_send = []
 commands_done = []
@@ -44,8 +45,13 @@ departures['Deadline'] = pd.to_datetime(departures['Deadline'])
 
 enumerations = pd.read_excel(r"Database\Components.xlsx", sheet_name='Enumerations', index_col='Enumeration')
 
-with open(r"Database/Temp/dispatching_temp.json", "r") as f:
-    dispatching_lots = json.load(f)
+file_path = Path("Database/Temp/dispatching_temp.json")
+
+if file_path.exists():
+    with open(file_path, "r") as f:
+        dispatching_lots = json.load(f)
+else:
+    dispatching_lots = []
 
 print(items.to_string())
 print(relations.to_string())
